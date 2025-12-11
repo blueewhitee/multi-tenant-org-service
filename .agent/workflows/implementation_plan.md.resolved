@@ -1,0 +1,44 @@
+# Workflow: Implement Core Features
+
+description: Implements the 5 core functional requirements for Organization Management.
+
+## Step 1: Pydantic Models (Data Validation)
+Create `app/models/org.py` and `app/models/auth.py`.
+Define schemas based on requirements:
+- **OrgCreate:** `organization_name`, `email`, `password`.
+- **OrgUpdate:** `organization_name`, `email`, `password`.
+- **Token:** `access_token`, `token_type`.
+- **AdminLogin:** `email`, `password`.
+
+## Step 2: Auth Service (Requirement 5 & C)
+Create `app/services/auth_service.py`.
+- Implement `verify_password` and `get_password_hash` using `passlib`.
+- Implement `create_access_token` using `python-jose` (JWT).
+- **Rule Check:** Ensure JWT payload contains Admin ID and Org ID.
+
+## Step 3: Organization Service (Requirements 1-4)
+Create `app/services/org_service.py` with `OrganizationService` class.
+
+### 3.1 Create Logic
+- Check if org name exists in Master DB.
+- Create Admin User (hash password).
+- Insert metadata into Master DB.
+- **Dynamic DB:** Programmatically insert a dummy doc into `org_{name}` collection to initialize it.
+
+### 3.2 Update Logic (The Complex Part)
+- Check if new name exists.
+- If name changes:
+  1. Create NEW collection `org_{new_name}`.
+  2. Copy all docs from OLD collection `org_{old_name}` to NEW.
+  3. Update Master DB metadata.
+  4. Drop OLD collection.
+
+### 3.3 Get & Delete Logic
+- **Get:** Fetch from Master DB.
+- **Delete:** Remove from Master DB AND drop the `org_{name}` collection.
+
+## Step 4: API Routes
+Create `app/api/v1/endpoints.py`.
+- Define `POST /org/create`, `GET /org/get`, `PUT /org/update`, `DELETE /org/delete`.
+- Define `POST /admin/login`.
+- Inject `OrganizationService` and `AuthService` dependencies.
