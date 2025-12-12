@@ -1,20 +1,24 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, status, Depends, HTTPException, Request
 from app.models.org import OrgCreate, OrgResponse, OrgUpdate
 from app.services.org_service import OrganizationService
 from app.api.deps import get_current_admin
 from app.models.auth import TokenData
+from app.main import limiter
+
 
 router = APIRouter()
 
 @router.post("/create", response_model=OrgResponse, status_code=status.HTTP_201_CREATED)
-async def create_organization(org_in: OrgCreate):
+@limiter.limit("10/minute")
+async def create_organization(request: Request, org_in: OrgCreate):
     """
     Create a new organization.
     """
     return await OrganizationService.create_organization(org_in)
 
 @router.get("/get", response_model=OrgResponse)
-async def get_organization(organization_name: str):
+@limiter.limit("100/minute")
+async def get_organization(request: Request, organization_name: str):
     """
     Get organization details.
     """
@@ -25,7 +29,9 @@ async def get_organization(organization_name: str):
     )
 
 @router.put("/update", response_model=OrgResponse)
+@limiter.limit("10/minute")
 async def update_organization(
+    request: Request,
     org_in: OrgUpdate,
     current_admin: TokenData = Depends(get_current_admin)
 ):
@@ -56,7 +62,9 @@ async def update_organization(
     return await OrganizationService.update_organization(old_name, org_in)
 
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def delete_organization(
+    request: Request,
     organization_name: str,
     current_admin: TokenData = Depends(get_current_admin)
 ):

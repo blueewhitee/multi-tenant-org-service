@@ -1,11 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from app.models.auth import AdminLogin, Token
 from app.services.auth_service import AuthService
+from app.main import limiter
 
 router = APIRouter()
 
 @router.post("/login", response_model=Token)
-async def login_for_access_token(login_data: AdminLogin):
+@limiter.limit("5/minute")
+async def login_for_access_token(request: Request, login_data: AdminLogin):
     """
     Admin Login.
     """
