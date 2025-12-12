@@ -1,6 +1,8 @@
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.core.config import settings
-import logging
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 class DatabaseManager:
     client: AsyncIOMotorClient = None
@@ -10,16 +12,20 @@ class DatabaseManager:
 
     async def connect(self):
         """Establish connection to MongoDB."""
-        logging.info("Connecting to MongoDB...")
-        self.client = AsyncIOMotorClient(settings.MONGO_URL)
-        logging.info("Connected to MongoDB.")
+        logger.info("Connecting to MongoDB...")
+        try:
+            self.client = AsyncIOMotorClient(settings.MONGO_URL)
+            logger.info("--- Connected to MongoDB ---")
+        except Exception as e:
+             logger.error(f"Failed to connect to MongoDB: {e}")
+             raise e
 
     async def close(self):
         """Close MongoDB connection."""
         if self.client:
-            logging.info("Closing MongoDB connection...")
+            logger.info("Closing MongoDB connection...")
             self.client.close()
-            logging.info("MongoDB connection closed.")
+            logger.info("MongoDB connection closed.")
 
     def get_master_database(self) -> AsyncIOMotorDatabase:
         """Return the master database instance."""

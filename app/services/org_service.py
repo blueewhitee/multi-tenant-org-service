@@ -3,7 +3,9 @@ from app.db.mongodb import db
 from app.models.org import OrgCreate, OrgUpdate, OrgResponse
 from app.services.auth_service import AuthService
 from datetime import datetime, timezone
-import logging
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 class OrganizationService:
     
@@ -18,12 +20,14 @@ class OrganizationService:
         3. Create metadata in Master DB.
         4. Initialize dynamic collection with dummy doc.
         """
+        logger.info(f"Creating organization: {data.organization_name}")
         master_db = db.get_master_database()
         organizations_collection = master_db["organizations"]
         
         # 1. Check for duplicate organization name
         existing_org = await organizations_collection.find_one({"organization_name": data.organization_name})
         if existing_org:
+            logger.warning(f"Organization creation failed: '{data.organization_name}' already exists.")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Organization with this name already exists"
@@ -52,6 +56,8 @@ class OrganizationService:
             "created_at": datetime.now(timezone.utc)
         })
         
+        logger.info(f"Organization '{data.organization_name}' created successfully with collection '{collection_name}'")
+        
         return OrgResponse(
             organization_name=data.organization_name,
             collection_name=collection_name
@@ -67,12 +73,14 @@ class OrganizationService:
 
     @staticmethod
     async def delete_organization(org_name: str):
+        logger.info(f"Deleting organization: {org_name}")
         master_db = db.get_master_database()
         org_collection = master_db["organizations"]
         
         # Verify existence
         org = await org_collection.find_one({"organization_name": org_name})
         if not org:
+             logger.warning(f"Delete failed: Organization '{org_name}' not found")
              raise HTTPException(status_code=404, detail="Organization not found")
 
         # Delete from Master DB
@@ -83,6 +91,7 @@ class OrganizationService:
         # Motor/Pymongo expects dropping via the database object usually or collection.drop()
         tenant_collection = db.get_tenant_collection(org_name)
         await tenant_collection.drop()
+        logger.info(f"Organization '{org_name}' and its collection deleted.")
 
     @staticmethod
     async def update_organization(old_name: str, data: OrgUpdate) -> OrgResponse:
@@ -99,8 +108,10 @@ class OrganizationService:
         
         # If name changes, we have a migration scenario
         if new_name != old_name:
+            logger.info(f"Migrating organization data from '{old_name}' to '{new_name}'")
             # a. Check if new name exists
             if await org_collection.find_one({"organization_name": new_name}):
+                logger.error(f"Migration failed: Target name '{new_name}' already exists")
                 raise HTTPException(status_code=400, detail="New organization name already exists")
             
             # b. Create NEW collection (dummy insert)
@@ -138,6 +149,8 @@ class OrganizationService:
             
             # e. Drop OLD collection
             await old_tenant_collection.drop()
+            
+            logger.info(f"Migration complete: '{old_name}' -> '{new_name}'")
             
             return OrgResponse(
                 organization_name=new_name,
