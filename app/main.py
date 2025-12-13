@@ -24,6 +24,8 @@ tags_metadata = [
     },
 ]
 
+from scalar_fastapi import get_scalar_api_reference
+
 app = FastAPI(
     title="Multi-tenant Org Service",
     description="""
@@ -37,17 +39,11 @@ app = FastAPI(
     * Class-Based Services: Clean architecture with service layer pattern.
     """,
     version="1.0.0",
-    docs_url="/docs",
+    docs_url=None,   # Disable default Swagger
+    redoc_url=None,  # Disable ReDoc
     lifespan=lifespan,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     openapi_tags=tags_metadata,
-    swagger_ui_parameters={
-        "defaultModelsExpandDepth": -1,  # Hide Schemas at bottom
-        "docExpansion": "none",          # Collapse all operations
-        "syntaxHighlight.theme": "obsidian", # Dark theme for code
-        "tryItOutEnabled": True,         # "Try it out" ready by default
-        "displayRequestDuration": True,  # Show how long requests take
-    }
 )
 
 app.add_middleware(
@@ -71,6 +67,13 @@ from app.api.v1.auth import router as auth_router
 
 app.include_router(org_router, prefix="/api/v1/org", tags=["Organization"])
 app.include_router(auth_router, prefix="/api/v1/admin", tags=["Authentication"])
+
+@app.get("/docs", include_in_schema=False)
+async def scalar_html():
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url,
+        title=app.title,
+    )
 
 @app.get("/", include_in_schema=False)
 async def root():
