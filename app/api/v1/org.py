@@ -3,7 +3,7 @@ from app.models.org import OrgCreate, OrgResponse, OrgUpdate
 from app.services.org_service import OrganizationService
 from app.api.deps import get_current_admin
 from app.models.auth import TokenData
-from app.main import limiter
+from app.core.rate_limit import limiter
 
 
 router = APIRouter()

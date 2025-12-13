@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from app.models.auth import AdminLogin, Token
 from app.services.auth_service import AuthService
-from app.main import limiter
+from app.core.rate_limit import limiter
 
 router = APIRouter()
 
